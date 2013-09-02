@@ -28,9 +28,7 @@ var XAJAX;
 
         function receiveMessage(event) {
 
-            var trailingSlash = /\/$/;
-
-            if (event.origin.replace(trailingSlash, "") !== serverUrl.replace(trailingSlash, "")) {
+            if (serverUrl.indexOf(event.origin) !== 0) {
                 return;
             }
 
