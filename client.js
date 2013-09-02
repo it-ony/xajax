@@ -1,23 +1,23 @@
 var XAJAX;
 
-(function(window, document) {
+(function (window, document) {
 
     var serverCache = {};
 
-    XAJAX = function(serverUrl, callback) {
+    XAJAX = function (serverUrl, callback) {
 
         var initializationDelay = 1000,
             queue = [],
-            // if the iFrame has been initialized
+        // if the iFrame has been initialized
             initialized = false,
-            // true, if we can communicate with the iFrame
+        // true, if we can communicate with the iFrame
             loaded = false,
             checkInitializedTimer = null,
             iFrame = null,
             publicMethods,
             messageCount = 0,
 
-            // stores all sent messages, identified by the messageId
+        // stores all sent messages, identified by the messageId
             messages = {};
 
         if (window.addEventListener) {
@@ -28,7 +28,9 @@ var XAJAX;
 
         function receiveMessage(event) {
 
-            if (event.origin !== serverUrl) {
+            var trailingSlash = /\/$/;
+
+            if (event.origin.replace(trailingSlash, "") !== serverUrl.replace(trailingSlash, "")) {
                 return;
             }
 
@@ -70,11 +72,10 @@ var XAJAX;
         function initializeIFrame() {
 
             iFrame = document.createElement("iframe");
-            iFrame.onload = function() {
+            iFrame.onload = function () {
 
                 if (!initialized) {
-                    checkInitializedTimer = setTimeout(function() {
-                        // TODO: init failed
+                    checkInitializedTimer = setTimeout(function () {
                         initialized = true;
                         callback(new Error("Initialisation failed"), publicMethods);
                     }, initializationDelay);
@@ -155,7 +156,7 @@ var XAJAX;
      * @param [callback]
      * @returns {XAJAX}
      */
-    XAJAX.create = function(serverUrl, callback) {
+    XAJAX.create = function (serverUrl, callback) {
 
         var instance;
 
@@ -186,7 +187,7 @@ var XAJAX;
 
             var cacheEntry = serverCache[serverUrl];
 
-            if  (cacheEntry.initialized) {
+            if (cacheEntry.initialized) {
                 callback && callback(cacheEntry.initializedError);
             } else {
                 cacheEntry.callbacks.push(callback);
