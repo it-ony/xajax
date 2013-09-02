@@ -1,13 +1,13 @@
 var XAJAX;
 
-(function(window, document, undefined) {
+(function(window, document) {
 
     var serverCache = {};
 
     XAJAX = function(serverUrl, callback) {
 
         var initializationDelay = 1000,
-            ajaxQueue = [],
+            queue = [],
             // if the iFrame has been initialized
             initialized = false,
             // true, if we can communicate with the iFrame
@@ -45,17 +45,24 @@ var XAJAX;
                 callback && callback(null, publicMethods);
 
                 // progress queue
-                for (var i = 0; i < ajaxQueue.length; i++) {
-                    var request = ajaxQueue[i];
+                for (var i = 0; i < queue.length; i++) {
+                    var request = queue[i];
                     publicMethods.ajax(request.url, request.options, request.callback);
                 }
 
-                ajaxQueue = [];
-            } else {
-                // TODO: handle ajax request
-            }
+                queue = [];
+            } else if (initialized) {
 
-            console.log("Receive message in client", event);
+                var eventData = JSON.parse(event.data),
+                    messageId = eventData.messageId,
+                    messageObject = messages[messageId];
+
+                if (messageObject && messageObject.callback) {
+                    messageObject.callback(eventData.error, eventData.data);
+                }
+
+                delete messages[messageId];
+            }
         }
 
         initializeIFrame();
@@ -76,10 +83,8 @@ var XAJAX;
             };
 
             iFrame.src = serverUrl;
-            // TODO: remove comments
-//            iframe.style.visibility = "hidden";
-//            iframe.style.display = "none";
-//
+            iFrame.style.visibility = "hidden";
+            iFrame.style.display = "none";
 
             //noinspection XHTMLIncompatabilitiesJS
             var body = document.body || document.getElementsByTagName("body")[0];
@@ -123,9 +128,8 @@ var XAJAX;
 
                         sendMessage("ajax", {
                             url: url,
-                            options: options,
-                            callback: callback
-                        });
+                            options: options
+                        }, callback);
 
                     } else {
                         callback && callback(new Error("Cannot communicate with iFrame"));
@@ -133,7 +137,7 @@ var XAJAX;
 
                 } else {
                     // queue it
-                    ajaxQueue.push({
+                    queue.push({
                         url: url,
                         options: options,
                         callback: callback
@@ -143,10 +147,6 @@ var XAJAX;
         };
 
         return publicMethods;
-
-        // TODO: create iframe
-        // TODO: cache ajax queue
-        // TODO: ...
     };
 
     /***
@@ -157,11 +157,46 @@ var XAJAX;
      */
     XAJAX.create = function(serverUrl, callback) {
 
+        var instance;
+
         if (!serverCache.hasOwnProperty(serverUrl)) {
-            serverCache[serverUrl] = new XAJAX(serverUrl, callback);
+
+            instance = new XAJAX(serverUrl, function (err) {
+
+                var cacheEntry = serverCache[serverUrl];
+
+                cacheEntry.initialized = true;
+                cacheEntry.initializedError = err;
+
+                // invoke all callbacks
+                var callbacks = cacheEntry.callbacks;
+
+                for (var i = 0; i < callbacks.length; i++) {
+                    callbacks[i] && callbacks[i](err);
+                }
+            });
+
+            serverCache[serverUrl] = {
+                callbacks: [callback],
+                initialized: false,
+                initializedError: null,
+                instance: instance
+            };
+        } else {
+
+            var cacheEntry = serverCache[serverUrl];
+
+            if  (cacheEntry.initialized) {
+                callback && callback(cacheEntry.initializedError);
+            } else {
+                cacheEntry.callbacks.push(callback);
+            }
+
+            instance = cacheEntry.instance;
         }
 
-        return serverCache[serverUrl];
+        return instance;
+
     }
 
 })(window, document);
