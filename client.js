@@ -8,11 +8,17 @@ var XAJAX;
 
         var initializationDelay = 1000,
             ajaxQueue = [],
-            loaded = false,
+            // if the iFrame has been initialized
             initialized = false,
+            // true, if we can communicate with the iFrame
+            loaded = false,
             checkInitializedTimer = null,
             iFrame = null,
-            publicMethods;
+            publicMethods,
+            messageCount = 0,
+
+            // stores all sent messages, identified by the messageId
+            messages = {};
 
         if (window.addEventListener) {
             addEventListener("message", receiveMessage, false);
@@ -32,7 +38,9 @@ var XAJAX;
                 }
 
                 checkInitializedTimer && clearTimeout(checkInitializedTimer);
+
                 initialized = true;
+                loaded = true;
 
                 callback && callback(null, publicMethods);
 
@@ -80,6 +88,23 @@ var XAJAX;
 
         }
 
+        function sendMessage(type, data, callback) {
+            messageCount++;
+
+            var message = {
+                type: type,
+                data: data,
+                messageId: messageCount
+            };
+
+            messages[messageCount] = {
+                message: message,
+                callback: callback
+            };
+
+            iFrame.contentWindow.postMessage(JSON.stringify(message), serverUrl);
+        }
+
         // Public methods
         publicMethods = {
 
@@ -92,8 +117,20 @@ var XAJAX;
              */
             ajax: function (url, options, callback) {
 
-                if (loaded) {
-                    // perform post message on iFrame window
+                if (initialized) {
+                    if (loaded) {
+                        // perform post message on iFrame window
+
+                        sendMessage("ajax", {
+                            url: url,
+                            options: options,
+                            callback: callback
+                        });
+
+                    } else {
+                        callback && callback(new Error("Cannot communicate with iFrame"));
+                    }
+
                 } else {
                     // queue it
                     ajaxQueue.push({
