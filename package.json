@@ -1,0 +1,27 @@
+{
+  "name": "xajax",
+  "version": "0.1.0",
+  "author": "Tony Findeisen <xajax@tonyfindeisen.de>",
+  "contributors": [
+    "Rolf Richter <ror@spreadshirt.net>",
+    "Marcel Pflug <mightyplow@gmail.com>"
+  ],
+  "description": "xajax performs cross domain ajax requests via iFrame and postMessage",
+  "scripts": {
+    "build": "grunt"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/tony/xajax.git"
+  },
+  "keywords": [
+    "ajax",
+    "cross-domain"
+  ],
+  "devDependencies": {
+    "grunt": "~0.4.0",
+    "grunt-contrib-uglify": "~0.2.2"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/it-ony/xajax"
+}
