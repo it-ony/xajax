@@ -5,8 +5,8 @@ module.exports = function (grunt) {
         uglify: {
             build: {
                 files: {
-                    'server.min.js': ['server.js'],
-                    'client.min.js': ['client.js']
+                    'build/server.min.js': ['server.js'],
+                    'build/client.min.js': ['client.js']
                 }
             }
         }
@@ -17,11 +17,11 @@ module.exports = function (grunt) {
             index, server;
 
         index = fs.readFileSync("index.html", "utf8");
-        server = fs.readFileSync("server.min.js", "utf8");
+        server = fs.readFileSync("build/server.min.js", "utf8");
 
         index = index.replace(/<script.*?script>/, '<script type="text/javascript">' + server +'</script>');
 
-        fs.writeFileSync("index.min.html", index, "utf8");
+        fs.writeFileSync("build/index.min.html", index, "utf8");
 
     });
 
