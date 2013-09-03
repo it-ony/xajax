@@ -1,61 +1,150 @@
 (function (window, undefined) {
-
-    var parent = window.parent,
+    var XAJAX = window.XAJAX = window.XAJAX || {},
+        parent = window.parent,
         console = window.console,
-        initialized = false,
-        handlers = {
-            ajax: function (data, messageId) {
-                ajax(data.url, data.options, function (err, result) {
-                    sendMessage(messageId, err, result);
-                });
+        programIds = ['Msxml2.XMLHTTP', 'Microsoft.XMLHTTP', 'Msxml2.XMLHTTP.4.0'],
+
+        Server = function (options) {
+
+            options = extend({}, {
+                allowedOrigins: [
+                    // use "*" for all
+                ],
+
+                allowedRequests: [
+                ],
+
+                /***
+                 * guard access to the origin
+                 *
+                 * @param {String} origin - the origin the request came from
+                 * @returns {boolean} - true if the access is granted
+                 */
+                allowOrigin: function (origin) {
+                    for (var i = 0; i < this.allowedOrigins.length; i++) {
+                        var o = this.allowedOrigins[i];
+
+                        if (o === "*") {
+                            return true;
+                        }
+
+                        if (o === origin) {
+                            return true
+                        }
+                    }
+
+                    return false;
+                },
+
+                /***
+                 *
+                 * guard access for ajax requests
+                 *
+                 * @param {String} url
+                 *
+                 * @returns {boolean}
+                 */
+                allowRequest: function (url) {
+
+                    for (var i = 0; i < this.allowedRequests.length; i++) {
+                        var request = this.allowedRequests[i];
+
+                        if (Object.prototype.toString.call(request) === "[object RegExp]") {
+                            if (request.test(url)) {
+                                return true;
+                            }
+                        } else if (request === url) {
+                            return true;
+                        }
+
+                    }
+
+                    return false;
+                }
+            }, options);
+
+            var initialized = false,
+                handlers = {
+                    ajax: function (data, messageId) {
+
+                        if (options.allowRequest(data.url)) {
+                            ajax(data.url, data.options, function (err, result) {
+                                sendMessage(messageId, err, result);
+                            });
+                        } else {
+                            sendMessage(messageId, "Request for url '" + data.url + "' not allowed", null);
+                        }
+
+
+                    }
+                };
+
+            if (window.addEventListener) {
+                addEventListener("message", receiveMessage, false);
+            } else {
+                attachEvent("onmessage", receiveMessage);
             }
-        },
-        programIds = ['Msxml2.XMLHTTP', 'Microsoft.XMLHTTP', 'Msxml2.XMLHTTP.4.0'];
 
-    if (window.addEventListener) {
-        addEventListener("message", receiveMessage, false);
-    } else {
-        attachEvent("onmessage", receiveMessage);
-    }
+            if (parent) {
+                // send initialized event
+                parent.postMessage("initialized", "*");
+                initialized = true;
+            } else {
+                console && console.log && console.log("Cannot find parent");
+            }
 
-    if (parent) {
-        // send initialized event
-        parent.postMessage("initialized", "*");
-        initialized = true;
-    } else {
-        console && console.log && console.log("Cannot find parent");
-    }
+
+            /***
+             * event handler for receiveMessage on window object
+             * @param event
+             */
+            function receiveMessage(event) {
+                if (!initialized) {
+                    return;
+                }
+
+                var eventData = JSON.parse(event.data);
+
+                // validate event data
+                if (!(eventData && eventData.hasOwnProperty("type") && eventData.hasOwnProperty("data") && eventData.hasOwnProperty("messageId"))) {
+                    sendMessage(eventData.messageId, "Data couldn't be parsed", null);
+                    return;
+                }
+
+                if (!options.allowOrigin(event.origin)) {
+                    sendMessage(eventData.messageId, "Origin " + event.origin + " not allowed", null);
+                    return;
+                }
+
+
+                var handler = handlers[eventData.type];
+
+                if (handler) {
+                    try {
+                        // invoke handler
+                        handler(eventData.data, eventData.messageId);
+                    } catch (e) {
+                        sendMessage(eventData.messageId, e, null);
+                    }
+                } else {
+                    sendMessage(eventData.messageId, "Handler for type '" + eventData.type + "' not found", null);
+                }
+            }
+        };
 
     /***
-     * event handler for receiveMessage on window object
-     * @param event
+     *
+     * @param [options]
+     * @param {Array} [options.allowedOrigins=['*']]
+     * @param {Array} [options.allowedRequests]
+     * @param {Function} [options.allowOrigin]
+     * @param {Function} [options.allowRequest]
+     *
+     * @returns {Server}
      */
-    function receiveMessage(event) {
-        if (!initialized) {
-            return;
-        }
-
-        var eventData = JSON.parse(event.data);
-
-        // validate event data
-        if (!(eventData && eventData.hasOwnProperty("type") && eventData.hasOwnProperty("data") && eventData.hasOwnProperty("messageId"))) {
-            sendMessage(eventData.messageId, "Data couldn't be parsed");
-            return;
-        }
-
-        var handler = handlers[eventData.type];
-
-        if (handler) {
-            try {
-                // invoke handler
-                handler(eventData.data, eventData.messageId);
-            } catch (e) {
-                sendMessage(eventData.messageId, e);
-            }
-        } else {
-            sendMessage(eventData.messageId, "Handler for type '" + eventData.type + "' not found");
-        }
-    }
+    XAJAX.createServer = function(options) {
+        return new Server(options);
+    };
 
     /***
      * send a message to the parent frame
