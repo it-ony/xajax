@@ -10,25 +10,12 @@
 
     XAJAX.createServer({
         allowedOrigins: [
-            // use "*" for allow all origins
+            "*"
         ],
 
         allowedRequests: [
-            /*
-            *  a RegExp or String that guard the access for ajax requests e.g.
-            *  /^\/api/ - to allow all /api* calls
-            * */
+            /^\/api/
         ]
-
-        /*
-        ,allowOrigin: function(origin) {
-            // return true if origin is allowed
-        }
-
-        ,allowRequest: function (url) {
-            // return true if
-        }
-        */
     });
 
 </script>
