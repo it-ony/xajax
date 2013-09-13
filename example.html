@@ -12,12 +12,29 @@
 
 <script type="text/javascript">
 
-    var xajax = XAJAX.create("http://external-server.tld", function(err) {
+    var myClient = XAJAX.create("http://external-server.tld/index.html", function (err) {
+        console.log("Callback invoked", err);
 
+        if (err) {
+            console.error(err, err.message);
+        }
     });
 
-//    xajax.ajax()
-    console.log(xajax);
+    myClient.ajax("/url", {
+        type: "POST",               //  optional, default GET
+        //contentType:                  default: "application/x-www-form-urlencoded"
+        // async: true                  default: true, leaf it this way!!
+        headers: {
+            // headers to be sent
+        },
+        queryParameter: {
+            mediaType: "json"
+            // some other parameter
+        },
+        data: '{"foo": "bar"}'
+    }, function (err, result) {
+        console.log("Ajax returned", err, result);
+    });
 
 </script>
 
